@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -53,7 +53,10 @@ class AnalyzeRequest(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "example": {"repo_url": "https://github.com/tiangolo/fastapi", "branch": "master"}
+            "example": {
+                "repo_url": "https://github.com/tiangolo/fastapi",
+                "branch": "master",
+            }
         }
     }
 
