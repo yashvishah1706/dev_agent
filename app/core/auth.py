@@ -26,7 +26,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 # ── Demo user store (swap for DB in production) ────────────────────────────
-# Generate a hash with: python -c "from passlib.context import CryptContext; print(CryptContext(['bcrypt']).hash('yourpassword'))"
 DEMO_USERS = {
     "admin": {
         "username": "admin",
@@ -88,12 +87,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username, role=role)
-    except JWTError:
-        raise credentials_exception
+
+    except JWTError as e:  # ✅ FIXED HERE
+        raise credentials_exception from e
 
     user = DEMO_USERS.get(token_data.username)
     if user is None:
         raise credentials_exception
+
     return User(username=token_data.username, role=token_data.role)
 
 
