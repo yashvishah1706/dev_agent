@@ -12,8 +12,6 @@ Guardrails:
 """
 
 import asyncio
-import subprocess
-from pathlib import Path
 from typing import Any
 
 from app.agents.base import BaseAgent
@@ -23,13 +21,13 @@ logger = get_logger(__name__)
 
 # Safe, hardcoded test commands per framework — never user-supplied
 SAFE_TEST_COMMANDS = {
-    "pytest":    ["python", "-m", "pytest", "--tb=short", "-q", "--no-header"],
-    "unittest":  ["python", "-m", "unittest", "discover", "-v"],
-    "jest":      ["npx", "jest", "--no-coverage", "--passWithNoTests"],
-    "vitest":    ["npx", "vitest", "run"],
-    "go_test":   ["go", "test", "./...", "-v", "-timeout", "30s"],
-    "cargo":     ["cargo", "test", "--", "--test-output", "immediate"],
-    "npm_test":  ["npm", "test", "--", "--watchAll=false"],
+    "pytest": ["python", "-m", "pytest", "--tb=short", "-q", "--no-header"],
+    "unittest": ["python", "-m", "unittest", "discover", "-v"],
+    "jest": ["npx", "jest", "--no-coverage", "--passWithNoTests"],
+    "vitest": ["npx", "vitest", "run"],
+    "go_test": ["go", "test", "./...", "-v", "-timeout", "30s"],
+    "cargo": ["cargo", "test", "--", "--test-output", "immediate"],
+    "npm_test": ["npm", "test", "--", "--watchAll=false"],
 }
 
 
@@ -60,8 +58,7 @@ class TestRunnerAgent(BaseAgent):
 
         cmd = SAFE_TEST_COMMANDS[framework]
         logger.info(
-            "Running tests",
-            extra={"job_id": self.job_id, "framework": framework, "cmd": cmd}
+            "Running tests", extra={"job_id": self.job_id, "framework": framework, "cmd": cmd}
         )
 
         result = await self._run_subprocess(cmd)
@@ -93,6 +90,7 @@ class TestRunnerAgent(BaseAgent):
         if (repo / "package.json").exists():
             try:
                 import json
+
                 pkg = json.loads((repo / "package.json").read_text())
                 scripts = pkg.get("scripts", {})
                 devdeps = {**pkg.get("devDependencies", {}), **pkg.get("dependencies", {})}
@@ -127,16 +125,14 @@ class TestRunnerAgent(BaseAgent):
                 cwd=str(self.repo_path),
             )
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(), timeout=60
-                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
                 return {
                     "stdout": stdout.decode("utf-8", errors="ignore"),
                     "stderr": stderr.decode("utf-8", errors="ignore"),
                     "exit_code": proc.returncode,
                     "timed_out": False,
                 }
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
                 timed_out = True
                 return {
@@ -156,24 +152,30 @@ class TestRunnerAgent(BaseAgent):
     def _parse_output(self, framework: str, stdout: str, stderr: str) -> dict:
         """Extract pass/fail/error counts from test output."""
         import re
+
         output = stdout + stderr
         passed = failed = errors = 0
 
         if framework == "pytest":
             # "5 passed, 2 failed, 1 error"
             m = re.search(r"(\d+) passed", output)
-            if m: passed = int(m.group(1))
+            if m:
+                passed = int(m.group(1))
             m = re.search(r"(\d+) failed", output)
-            if m: failed = int(m.group(1))
+            if m:
+                failed = int(m.group(1))
             m = re.search(r"(\d+) error", output)
-            if m: errors = int(m.group(1))
+            if m:
+                errors = int(m.group(1))
 
         elif framework in ("jest", "vitest", "npm_test"):
             # "Tests: 5 passed, 2 failed"
             m = re.search(r"(\d+) passed", output)
-            if m: passed = int(m.group(1))
+            if m:
+                passed = int(m.group(1))
             m = re.search(r"(\d+) failed", output)
-            if m: failed = int(m.group(1))
+            if m:
+                failed = int(m.group(1))
 
         elif framework == "go_test":
             # "ok" lines = passed packages, "FAIL" lines = failed
@@ -182,8 +184,10 @@ class TestRunnerAgent(BaseAgent):
 
         elif framework == "cargo":
             m = re.search(r"(\d+) passed", output)
-            if m: passed = int(m.group(1))
+            if m:
+                passed = int(m.group(1))
             m = re.search(r"(\d+) failed", output)
-            if m: failed = int(m.group(1))
+            if m:
+                failed = int(m.group(1))
 
         return {"passed": passed, "failed": failed, "errors": errors}

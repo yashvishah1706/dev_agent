@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -8,10 +7,10 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # GitHub
-    github_token: Optional[str] = None
+    github_token: str | None = None
 
     # LLM
-    anthropic_api_key: Optional[str] = None
+    anthropic_api_key: str | None = None
     llm_model: str = "claude-sonnet-4-20250514"
 
     # Storage

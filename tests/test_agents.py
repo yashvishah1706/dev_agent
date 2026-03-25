@@ -1,12 +1,9 @@
-import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-import tempfile
-import os
+from unittest.mock import AsyncMock, patch
 
+import pytest
 
 # ── Repo Scanner tests ─────────────────────────────────────────────────────
+
 
 class TestRepoScannerAgent:
     @pytest.mark.asyncio
@@ -22,8 +19,10 @@ class TestRepoScannerAgent:
 
         agent = RepoScannerAgent(job_id="test-job", repo_path=tmp_path)
 
-        with patch.object(agent, '_set_status', new_callable=AsyncMock), \
-             patch.object(agent, '_heartbeat_loop', new_callable=AsyncMock):
+        with (
+            patch.object(agent, "_set_status", new_callable=AsyncMock),
+            patch.object(agent, "_heartbeat_loop", new_callable=AsyncMock),
+        ):
             result = await agent.run()
 
         assert result["total_files"] == 4
@@ -45,8 +44,10 @@ class TestRepoScannerAgent:
 
         agent = RepoScannerAgent(job_id="test-job", repo_path=tmp_path)
 
-        with patch.object(agent, '_set_status', new_callable=AsyncMock), \
-             patch.object(agent, '_heartbeat_loop', new_callable=AsyncMock):
+        with (
+            patch.object(agent, "_set_status", new_callable=AsyncMock),
+            patch.object(agent, "_heartbeat_loop", new_callable=AsyncMock),
+        ):
             result = await agent.run()
 
         # Should only find the root index.js
@@ -62,14 +63,17 @@ class TestRepoScannerAgent:
 
         agent = RepoScannerAgent(job_id="test-job", repo_path=tmp_path)
 
-        with patch.object(agent, '_set_status', new_callable=AsyncMock), \
-             patch.object(agent, '_heartbeat_loop', new_callable=AsyncMock):
+        with (
+            patch.object(agent, "_set_status", new_callable=AsyncMock),
+            patch.object(agent, "_heartbeat_loop", new_callable=AsyncMock),
+        ):
             result = await agent.run()
 
         assert "Node.js" in result["detected_stack"]
 
 
 # ── Dependency Analyzer tests ──────────────────────────────────────────────
+
 
 class TestDependencyAnalyzerAgent:
     @pytest.mark.asyncio
@@ -87,8 +91,10 @@ class TestDependencyAnalyzerAgent:
 
         agent = DependencyAnalyzerAgent(job_id="test-job", repo_path=tmp_path)
 
-        with patch.object(agent, '_set_status', new_callable=AsyncMock), \
-             patch.object(agent, '_heartbeat_loop', new_callable=AsyncMock):
+        with (
+            patch.object(agent, "_set_status", new_callable=AsyncMock),
+            patch.object(agent, "_heartbeat_loop", new_callable=AsyncMock),
+        ):
             result = await agent.run()
 
         assert "fastapi" in result["dependencies"]
@@ -100,8 +106,9 @@ class TestDependencyAnalyzerAgent:
 
     @pytest.mark.asyncio
     async def test_parses_package_json(self, tmp_path):
-        from app.agents.dependency_analyzer import DependencyAnalyzerAgent
         import json
+
+        from app.agents.dependency_analyzer import DependencyAnalyzerAgent
 
         pkg = {
             "name": "my-app",
@@ -112,8 +119,10 @@ class TestDependencyAnalyzerAgent:
 
         agent = DependencyAnalyzerAgent(job_id="test-job", repo_path=tmp_path)
 
-        with patch.object(agent, '_set_status', new_callable=AsyncMock), \
-             patch.object(agent, '_heartbeat_loop', new_callable=AsyncMock):
+        with (
+            patch.object(agent, "_set_status", new_callable=AsyncMock),
+            patch.object(agent, "_heartbeat_loop", new_callable=AsyncMock),
+        ):
             result = await agent.run()
 
         assert "react" in result["dependencies"]
@@ -126,8 +135,10 @@ class TestDependencyAnalyzerAgent:
 
         agent = DependencyAnalyzerAgent(job_id="test-job", repo_path=tmp_path)
 
-        with patch.object(agent, '_set_status', new_callable=AsyncMock), \
-             patch.object(agent, '_heartbeat_loop', new_callable=AsyncMock):
+        with (
+            patch.object(agent, "_set_status", new_callable=AsyncMock),
+            patch.object(agent, "_heartbeat_loop", new_callable=AsyncMock),
+        ):
             result = await agent.run()
 
         assert result["manifests_found"] == []
@@ -136,9 +147,11 @@ class TestDependencyAnalyzerAgent:
 
 # ── Repo Cloner tests ──────────────────────────────────────────────────────
 
+
 class TestRepoCloner:
     def test_rejects_non_github_urls(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         cloner = RepoCloner(base_path=str(tmp_path))
 
         with pytest.raises(ValueError, match="Only these hosts"):
@@ -146,6 +159,7 @@ class TestRepoCloner:
 
     def test_rejects_non_https(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         cloner = RepoCloner(base_path=str(tmp_path))
 
         with pytest.raises(ValueError, match="Only http/https"):
@@ -153,6 +167,7 @@ class TestRepoCloner:
 
     def test_accepts_valid_github_url(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         cloner = RepoCloner(base_path=str(tmp_path))
 
         url = cloner._validate_url("https://github.com/tiangolo/fastapi")
@@ -160,6 +175,7 @@ class TestRepoCloner:
 
     def test_strips_credentials_from_url(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         cloner = RepoCloner(base_path=str(tmp_path))
 
         url = cloner._validate_url("https://user:password@github.com/user/repo")
@@ -168,6 +184,7 @@ class TestRepoCloner:
 
 
 # ── Job Store tests ────────────────────────────────────────────────────────
+
 
 class TestJobStore:
     @pytest.mark.asyncio

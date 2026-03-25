@@ -7,19 +7,21 @@ Tests for Phase 1 upgrades:
   - PgJobStore schema compatibility
 """
 
-import pytest
-import json
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+import json
 from datetime import timedelta
+from unittest.mock import MagicMock
 
+import pytest
 
 # ── Auth tests ─────────────────────────────────────────────────────────────
 
+
 class TestAuth:
     def test_create_and_decode_token(self):
-        from app.core.auth import create_access_token, SECRET_KEY, ALGORITHM
         from jose import jwt
+
+        from app.core.auth import ALGORITHM, SECRET_KEY, create_access_token
 
         token = create_access_token({"sub": "admin", "role": "admin"})
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -29,14 +31,12 @@ class TestAuth:
         assert "exp" in payload
 
     def test_token_expires(self):
-        from app.core.auth import create_access_token, SECRET_KEY, ALGORITHM
-        from jose import jwt, JWTError
+        from jose import JWTError, jwt
+
+        from app.core.auth import ALGORITHM, SECRET_KEY, create_access_token
 
         # Token that expired 1 second ago
-        token = create_access_token(
-            {"sub": "admin"},
-            expires_delta=timedelta(seconds=-1)
-        )
+        token = create_access_token({"sub": "admin"}, expires_delta=timedelta(seconds=-1))
         with pytest.raises(JWTError):
             jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
@@ -70,8 +70,9 @@ class TestAuth:
 
     @pytest.mark.asyncio
     async def test_get_current_user_invalid_token(self):
-        from app.core.auth import get_current_user
         from fastapi import HTTPException
+
+        from app.core.auth import get_current_user
 
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user("not-a-valid-token")
@@ -79,9 +80,10 @@ class TestAuth:
 
     @pytest.mark.asyncio
     async def test_get_current_user_missing_sub(self):
-        from app.core.auth import create_access_token, get_current_user, SECRET_KEY, ALGORITHM
-        from jose import jwt
         from fastapi import HTTPException
+        from jose import jwt
+
+        from app.core.auth import ALGORITHM, SECRET_KEY, create_access_token, get_current_user
 
         # Token with no 'sub' field
         token = create_access_token({"role": "admin"})
@@ -97,10 +99,12 @@ class TestAuth:
 
 # ── Structured logging tests ───────────────────────────────────────────────
 
+
 class TestStructuredLogging:
     def test_json_formatter_produces_valid_json(self):
-        import logging
         import io
+        import logging
+
         from app.core.logger import JSONFormatter
 
         handler = logging.StreamHandler(io.StringIO())
@@ -120,8 +124,9 @@ class TestStructuredLogging:
         assert "logger" in parsed
 
     def test_extra_fields_included_in_log(self):
-        import logging
         import io
+        import logging
+
         from app.core.logger import JSONFormatter
 
         handler = logging.StreamHandler(io.StringIO())
@@ -139,8 +144,9 @@ class TestStructuredLogging:
         assert parsed["agent"] == "repo_scanner"
 
     def test_get_logger_returns_named_logger(self):
-        from app.core.logger import get_logger
         import logging
+
+        from app.core.logger import get_logger
 
         logger = get_logger("my.module")
         assert isinstance(logger, logging.Logger)
@@ -149,17 +155,18 @@ class TestStructuredLogging:
 
 # ── Rate limiter tests ─────────────────────────────────────────────────────
 
+
 class TestRateLimiter:
     def test_limiter_is_configured(self):
         from app.core.rate_limit import limiter
+
         assert limiter is not None
 
     def test_rate_limit_exceeded_handler_returns_429(self):
         """Verify the custom handler sets the right status code."""
-        from app.core.rate_limit import rate_limit_exceeded_handler
         from slowapi.errors import RateLimitExceeded
-        from unittest.mock import MagicMock
-        import asyncio
+
+        from app.core.rate_limit import rate_limit_exceeded_handler
 
         mock_request = MagicMock()
         mock_exc = MagicMock(spec=RateLimitExceeded)
@@ -172,6 +179,7 @@ class TestRateLimiter:
 
 
 # ── WebSocket authentication tests ────────────────────────────────────────
+
 
 class TestWebSocketAuth:
     @pytest.mark.asyncio
@@ -195,21 +203,19 @@ class TestWebSocketAuth:
         from app.api.ws_routes import _authenticate_ws
         from app.core.auth import create_access_token
 
-        expired = create_access_token(
-            {"sub": "admin"},
-            expires_delta=timedelta(seconds=-10)
-        )
+        expired = create_access_token({"sub": "admin"}, expires_delta=timedelta(seconds=-10))
         result = await _authenticate_ws(expired)
         assert result is False
 
 
 # ── Job store tests ────────────────────────────────────────────────────────
 
+
 class TestJobStoreIntegration:
     @pytest.mark.asyncio
     async def test_full_job_lifecycle(self):
         from app.core.job_store import JobStore
-        from app.schemas.job import JobStatus, AgentStatus
+        from app.schemas.job import AgentStatus, JobStatus
 
         store = JobStore()
 
@@ -258,39 +264,46 @@ class TestJobStoreIntegration:
 
 # ── Repo cloner guardrail tests ────────────────────────────────────────────
 
+
 class TestRepoCloner:
     def test_allows_github(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         c = RepoCloner(base_path=str(tmp_path))
         url = c._validate_url("https://github.com/user/repo")
         assert "github.com" in url
 
     def test_allows_gitlab(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         c = RepoCloner(base_path=str(tmp_path))
         url = c._validate_url("https://gitlab.com/user/repo")
         assert "gitlab.com" in url
 
     def test_allows_bitbucket(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         c = RepoCloner(base_path=str(tmp_path))
         url = c._validate_url("https://bitbucket.org/user/repo")
         assert "bitbucket.org" in url
 
     def test_blocks_arbitrary_domain(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         c = RepoCloner(base_path=str(tmp_path))
         with pytest.raises(ValueError, match="Only these hosts"):
             c._validate_url("https://evil.com/steal/data")
 
     def test_blocks_ftp(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         c = RepoCloner(base_path=str(tmp_path))
         with pytest.raises(ValueError, match="Only http/https"):
             c._validate_url("ftp://github.com/user/repo")
 
     def test_strips_embedded_credentials(self, tmp_path):
         from app.core.repo_cloner import RepoCloner
+
         c = RepoCloner(base_path=str(tmp_path))
         url = c._validate_url("https://user:s3cr3t@github.com/user/repo")
         assert "s3cr3t" not in url

@@ -1,6 +1,5 @@
 import json
 import re
-from pathlib import Path
 from typing import Any
 
 from app.agents.base import BaseAgent
@@ -132,9 +131,7 @@ class DependencyAnalyzerAgent(BaseAgent):
         for py_file in py_files:
             try:
                 content = py_file.read_text(encoding="utf-8", errors="ignore")
-                imports = re.findall(
-                    r"^(?:from|import)\s+([\w\.]+)", content, re.MULTILINE
-                )
+                imports = re.findall(r"^(?:from|import)\s+([\w\.]+)", content, re.MULTILINE)
                 rel_path = str(py_file.relative_to(self.repo_path))
                 for imp in imports:
                     graph.append({"from": rel_path, "imports": imp})

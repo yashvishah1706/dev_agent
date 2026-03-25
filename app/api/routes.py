@@ -1,15 +1,16 @@
-import uuid
 import json
+import uuid
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
-from fastapi.responses import PlainTextResponse, JSONResponse
 
-from app.core.job_store import job_store
-from app.core.auth import get_current_user, User
-from app.core.rate_limit import limiter
-from app.core.logger import get_logger
-from app.schemas.job import AnalyzeRequest, AnalyzeResponse, JobDetailResponse, JobStatus
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
+
 from app.agents.pipeline import AgentPipeline
+from app.core.auth import User, get_current_user
+from app.core.job_store import job_store
+from app.core.logger import get_logger
+from app.core.rate_limit import limiter
+from app.schemas.job import AnalyzeRequest, AnalyzeResponse, JobDetailResponse, JobStatus
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -26,8 +27,10 @@ async def analyze_repo(
     """Start analysis. Rate limited: 5/min per IP. Returns job_id immediately."""
     job_id = str(uuid.uuid4())
     await job_store.create(job_id, body.repo_url)
-    logger.info("Analysis job created",
-        extra={"job_id": job_id, "repo_url": body.repo_url, "user": current_user.username})
+    logger.info(
+        "Analysis job created",
+        extra={"job_id": job_id, "repo_url": body.repo_url, "user": current_user.username},
+    )
     pipeline = AgentPipeline(job_id, body.repo_url, body.branch or "main")
     background_tasks.add_task(pipeline.run)
     return AnalyzeResponse(
@@ -39,8 +42,7 @@ async def analyze_repo(
 
 @router.get("/jobs/{job_id}", response_model=JobDetailResponse)
 @limiter.limit("60/minute")
-async def get_job(request: Request, job_id: str,
-                  current_user: User = Depends(get_current_user)):
+async def get_job(request: Request, job_id: str, current_user: User = Depends(get_current_user)):
     """Get current job status, agent states, results, and performance metrics."""
     job = await job_store.get(job_id)
     if not job:
@@ -95,7 +97,9 @@ async def get_metrics(job_id: str, current_user: User = Depends(get_current_user
             "total_seconds": m.total_duration_seconds,
             "clone_seconds": m.clone_duration_seconds,
             "agents": agent_durations,
-            "slowest_agent": max(agent_durations, key=agent_durations.get) if agent_durations else None,
+            "slowest_agent": (
+                max(agent_durations, key=agent_durations.get) if agent_durations else None
+            ),
         },
         "repo": {
             "files": m.repo_size_files,
@@ -158,13 +162,15 @@ async def delete_job(job_id: str, current_user: User = Depends(get_current_user)
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
 def _serialize_job(job) -> dict:
     """Convert job to JSON-serializable dict."""
+
     def default(o):
         if isinstance(o, datetime):
             return o.isoformat()
         return str(o)
-    import json
+
     return json.loads(json.dumps(job.model_dump(), default=default))
 
 
@@ -179,18 +185,18 @@ def _build_markdown_report(job) -> str:
     metrics = job.metrics
 
     lines = [
-        f"# Dev Agent Analysis Report",
-        f"",
+        "# Dev Agent Analysis Report",
+        "",
         f"**Repository:** {job.repo_url}  ",
         f"**Analyzed:** {job.completed_at.strftime('%Y-%m-%d %H:%M UTC') if job.completed_at else 'N/A'}  ",
         f"**Status:** {job.status}",
-        f"",
-        f"---",
-        f"",
-        f"## Summary",
-        f"",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "",
+        "---",
+        "",
+        "## Summary",
+        "",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| Primary Language | {summary.get('primary_language', 'N/A')} |",
         f"| Total Files | {summary.get('total_files', 'N/A')} |",
         f"| Lines of Code | {summary.get('total_lines', 'N/A')} |",
@@ -198,23 +204,23 @@ def _build_markdown_report(job) -> str:
         f"| Test Framework | {summary.get('test_framework', 'None detected')} |",
         f"| Tests Passed | {summary.get('tests_passed', 0)} |",
         f"| Tests Failed | {summary.get('tests_failed', 0)} |",
-        f"",
-        f"## Detected Stack",
-        f"",
+        "",
+        "## Detected Stack",
+        "",
     ]
 
     for s in summary.get("stack", []):
         lines.append(f"- {s}")
 
     lines += [
-        f"",
-        f"## Languages",
-        f"",
+        "",
+        "## Languages",
+        "",
     ]
     for lang, count in list(scan.get("languages", {}).items())[:10]:
         lines.append(f"- **{lang}**: {count} files")
 
-    lines += [f"", f"## Dependencies", f""]
+    lines += ["", "## Dependencies", ""]
     dep_list = list(deps.get("dependencies", {}).items())[:20]
     if dep_list:
         lines.append("| Package | Version |")
@@ -225,21 +231,28 @@ def _build_markdown_report(job) -> str:
         lines.append("No dependencies found.")
 
     if env.get("dockerfile"):
-        lines += [f"", f"## Generated Dockerfile", f"", f"```dockerfile", env["dockerfile"].strip(), f"```"]
+        lines += [
+            "",
+            "## Generated Dockerfile",
+            "",
+            "```dockerfile",
+            env["dockerfile"].strip(),
+            "```",
+        ]
 
     if env.get("run_command"):
-        lines += [f"", f"## Run Command", f"", f"```bash", env["run_command"], f"```"]
+        lines += ["", "## Run Command", "", "```bash", env["run_command"], "```"]
 
     if explanation.get("architecture_explanation"):
-        lines += [f"", f"## AI Architecture Explanation", f"", explanation["architecture_explanation"]]
+        lines += ["", "## AI Architecture Explanation", "", explanation["architecture_explanation"]]
 
     if metrics:
         lines += [
-            f"",
-            f"## Performance Metrics",
-            f"",
-            f"| Metric | Value |",
-            f"|--------|-------|",
+            "",
+            "## Performance Metrics",
+            "",
+            "| Metric | Value |",
+            "|--------|-------|",
             f"| Total Duration | {metrics.total_duration_seconds}s |",
             f"| Clone Duration | {metrics.clone_duration_seconds}s |",
             f"| Token Usage | {metrics.token_usage or 'N/A'} |",
@@ -248,5 +261,5 @@ def _build_markdown_report(job) -> str:
         for agent, dur in (metrics.agent_durations or {}).items():
             lines.append(f"| {agent} | {dur}s |")
 
-    lines += [f"", f"---", f"*Generated by Dev Agent Platform*"]
+    lines += ["", "---", "*Generated by Dev Agent Platform*"]
     return "\n".join(lines)

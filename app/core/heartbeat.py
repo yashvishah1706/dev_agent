@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
-from app.schemas.job import JobStatus, AgentStatus
+
+from app.schemas.job import JobStatus
 
 
 class HeartbeatMonitor:
@@ -9,8 +10,8 @@ class HeartbeatMonitor:
     If an agent hasn't pinged in 30 seconds, it's marked as 'stalled'.
     """
 
-    INTERVAL = 5       # seconds between checks
-    TIMEOUT = 30       # seconds before an agent is considered stalled
+    INTERVAL = 5  # seconds between checks
+    TIMEOUT = 30  # seconds before an agent is considered stalled
 
     def __init__(self, job_store):
         self.job_store = job_store

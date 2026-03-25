@@ -4,7 +4,6 @@ Calls Claude API with structured prompts.
 Tracks token usage and estimated cost.
 """
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +35,7 @@ class CodeExplainerAgent(BaseAgent):
             }
 
         from app.core.job_store import job_store
+
         job = await job_store.get(self.job_id)
         scan, deps = {}, {}
         if job and job.result:
@@ -53,9 +53,10 @@ class CodeExplainerAgent(BaseAgent):
             total_tokens = input_tokens + output_tokens
             cost = (input_tokens * COST_PER_INPUT_TOKEN) + (output_tokens * COST_PER_OUTPUT_TOKEN)
             await job_store.record_token_usage(self.job_id, total_tokens, cost)
-            logger.info("Token usage recorded",
-                extra={"job_id": self.job_id, "tokens": total_tokens,
-                       "cost_usd": round(cost, 6)})
+            logger.info(
+                "Token usage recorded",
+                extra={"job_id": self.job_id, "tokens": total_tokens, "cost_usd": round(cost, 6)},
+            )
 
         return {
             "architecture_explanation": response,
@@ -65,21 +66,46 @@ class CodeExplainerAgent(BaseAgent):
                 "input": usage.input_tokens if usage else None,
                 "output": usage.output_tokens if usage else None,
                 "total": (usage.input_tokens + usage.output_tokens) if usage else None,
-                "estimated_cost_usd": round(
-                    (usage.input_tokens * COST_PER_INPUT_TOKEN) +
-                    (usage.output_tokens * COST_PER_OUTPUT_TOKEN), 6
-                ) if usage else None,
+                "estimated_cost_usd": (
+                    round(
+                        (usage.input_tokens * COST_PER_INPUT_TOKEN)
+                        + (usage.output_tokens * COST_PER_OUTPUT_TOKEN),
+                        6,
+                    )
+                    if usage
+                    else None
+                ),
             },
         }
 
     def _sample_files(self) -> dict[str, str]:
         priority_names = [
-            "main.py", "app.py", "server.py", "index.js", "index.ts",
-            "main.go", "main.rs", "manage.py", "settings.py", "config.py",
-            "routes.py", "models.py", "schema.py", "database.py",
+            "main.py",
+            "app.py",
+            "server.py",
+            "index.js",
+            "index.ts",
+            "main.go",
+            "main.rs",
+            "manage.py",
+            "settings.py",
+            "config.py",
+            "routes.py",
+            "models.py",
+            "schema.py",
+            "database.py",
         ]
         samples = {}
-        skip_dirs = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", ".next"}
+        skip_dirs = {
+            ".git",
+            "node_modules",
+            "__pycache__",
+            ".venv",
+            "venv",
+            "dist",
+            "build",
+            ".next",
+        }
 
         for fname in priority_names:
             for fpath in self.repo_path.rglob(fname):
@@ -120,8 +146,7 @@ class CodeExplainerAgent(BaseAgent):
     def _build_prompt(self, scan: dict, deps: dict, files: dict) -> str:
         stack = ", ".join(scan.get("detected_stack", ["unknown"]))
         languages = ", ".join(
-            f"{lang} ({count} files)"
-            for lang, count in list(scan.get("languages", {}).items())[:5]
+            f"{lang} ({count} files)" for lang, count in list(scan.get("languages", {}).items())[:5]
         )
         total_files = scan.get("total_files", "?")
         total_lines = scan.get("total_lines", "?")
@@ -129,8 +154,7 @@ class CodeExplainerAgent(BaseAgent):
         top_deps = ", ".join(list(deps.get("dependencies", {}).keys())[:10])
 
         files_section = "\n\n".join(
-            f"### {path}\n```\n{content}\n```"
-            for path, content in files.items()
+            f"### {path}\n```\n{content}\n```" for path, content in files.items()
         )
 
         return f"""You are a senior software architect reviewing a codebase. Analyze this repository and provide a structured technical explanation.
@@ -169,6 +193,7 @@ Be specific. Reference actual file names and function names where relevant."""
 
     async def _call_claude(self, prompt: str):
         import anthropic
+
         client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
         try:
             message = await client.messages.create(

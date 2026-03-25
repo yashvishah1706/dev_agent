@@ -54,23 +54,35 @@ class BaseAgent(ABC):
 
                 logger.info(
                     "Agent completed",
-                    extra={"job_id": self.job_id, "agent": self.name,
-                           "duration_s": duration, "attempt": attempt}
+                    extra={
+                        "job_id": self.job_id,
+                        "agent": self.name,
+                        "duration_s": duration,
+                        "attempt": attempt,
+                    },
                 )
                 return result
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 duration = round(time.perf_counter() - start, 3)
                 last_error = f"Timed out after {self.timeout}s"
-                logger.warning("Agent timed out",
-                    extra={"job_id": self.job_id, "agent": self.name, "attempt": attempt})
+                logger.warning(
+                    "Agent timed out",
+                    extra={"job_id": self.job_id, "agent": self.name, "attempt": attempt},
+                )
 
             except Exception as e:
                 duration = round(time.perf_counter() - start, 3)
                 last_error = str(e)
-                logger.error("Agent error",
-                    extra={"job_id": self.job_id, "agent": self.name,
-                           "error": last_error, "attempt": attempt})
+                logger.error(
+                    "Agent error",
+                    extra={
+                        "job_id": self.job_id,
+                        "agent": self.name,
+                        "error": last_error,
+                        "attempt": attempt,
+                    },
+                )
 
             finally:
                 if self._heartbeat_task:
@@ -78,9 +90,15 @@ class BaseAgent(ABC):
 
             # Retry logic
             if attempt <= MAX_RETRIES and self.retryable:
-                logger.info("Retrying agent",
-                    extra={"job_id": self.job_id, "agent": self.name,
-                           "attempt": attempt, "delay": RETRY_DELAY})
+                logger.info(
+                    "Retrying agent",
+                    extra={
+                        "job_id": self.job_id,
+                        "agent": self.name,
+                        "attempt": attempt,
+                        "delay": RETRY_DELAY,
+                    },
+                )
                 await asyncio.sleep(RETRY_DELAY)
             else:
                 break
@@ -89,11 +107,16 @@ class BaseAgent(ABC):
         raise RuntimeError(f"Agent {self.name} failed after {attempt} attempt(s): {last_error}")
 
     @abstractmethod
-    async def run(self) -> Any:
-        ...
+    async def run(self) -> Any: ...
 
-    async def _set_status(self, status: str, output: Any = None,
-                           error: str = None, duration: float = None, retries: int = 0):
+    async def _set_status(
+        self,
+        status: str,
+        output: Any = None,
+        error: str = None,
+        duration: float = None,
+        retries: int = 0,
+    ):
         agent_status = AgentStatus(
             name=self.name,
             status=status,

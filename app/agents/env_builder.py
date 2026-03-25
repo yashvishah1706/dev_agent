@@ -17,7 +17,7 @@ from app.core.logger import get_logger
 logger = get_logger(__name__)
 
 
-PYTHON_DOCKERFILE = '''\
+PYTHON_DOCKERFILE = """\
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -32,9 +32,9 @@ COPY . .
 EXPOSE 8000
 
 CMD {run_cmd}
-'''
+"""
 
-NODE_DOCKERFILE = '''\
+NODE_DOCKERFILE = """\
 FROM node:20-alpine
 
 WORKDIR /app
@@ -47,9 +47,9 @@ COPY . .
 EXPOSE 3000
 
 CMD {run_cmd}
-'''
+"""
 
-GO_DOCKERFILE = '''\
+GO_DOCKERFILE = """\
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
@@ -63,9 +63,9 @@ WORKDIR /app
 COPY --from=builder /app/main .
 EXPOSE 8080
 CMD ["./main"]
-'''
+"""
 
-RUST_DOCKERFILE = '''\
+RUST_DOCKERFILE = """\
 FROM rust:1.75-slim AS builder
 WORKDIR /app
 COPY . .
@@ -76,7 +76,7 @@ WORKDIR /app
 COPY --from=builder /app/target/release/app .
 EXPOSE 8080
 CMD ["./app"]
-'''
+"""
 
 
 class EnvironmentBuilderAgent(BaseAgent):
@@ -93,6 +93,7 @@ class EnvironmentBuilderAgent(BaseAgent):
     async def run(self) -> Any:
         # Read scan results from the job store to inform generation
         from app.core.job_store import job_store
+
         job = await job_store.get(self.job_id)
         scan = {}
         if job and job.result and "repo_scan" in job.result:
@@ -123,7 +124,7 @@ class EnvironmentBuilderAgent(BaseAgent):
                 install_cmd=install_cmd,
                 run_cmd=run_cmd,
             )
-            result["run_command"] = f"docker build -t my-app . && docker run -p 8000:8000 my-app"
+            result["run_command"] = "docker build -t my-app . && docker run -p 8000:8000 my-app"
             result["setup_instructions"] = [
                 "1. Install Python 3.12+",
                 f"2. Run: {install_cmd.replace('pip install', 'pip install')}",
@@ -192,8 +193,11 @@ class EnvironmentBuilderAgent(BaseAgent):
         if any("main.py" in ep or "app.py" in ep for ep in entry_points):
             ep = next((ep for ep in entry_points if "main.py" in ep or "app.py" in ep), "main.py")
             module = ep.replace("/", ".").replace(".py", "")
-            return f'["uvicorn", "{module}:app", "--host", "0.0.0.0", "--port", "8000"]' if docker \
-                   else f"uvicorn {module}:app --reload"
+            return (
+                f'["uvicorn", "{module}:app", "--host", "0.0.0.0", "--port", "8000"]'
+                if docker
+                else f"uvicorn {module}:app --reload"
+            )
         if entry_points:
             ep = entry_points[0].replace("/", ".").replace(".py", "")
             return f'["python", "-m", "{ep}"]' if docker else f"python -m {ep}"
@@ -203,6 +207,7 @@ class EnvironmentBuilderAgent(BaseAgent):
         pkg = repo_path / "package.json"
         if pkg.exists():
             import json
+
             try:
                 data = json.loads(pkg.read_text())
                 scripts = data.get("scripts", {})
@@ -216,8 +221,16 @@ class EnvironmentBuilderAgent(BaseAgent):
 
     def _needs_database(self, config_files: list, repo_path: Path) -> bool:
         """Detect if the project uses a database."""
-        db_signals = ["sqlalchemy", "psycopg2", "asyncpg", "mongoose",
-                      "prisma", "sequelize", "typeorm", "django"]
+        db_signals = [
+            "sqlalchemy",
+            "psycopg2",
+            "asyncpg",
+            "mongoose",
+            "prisma",
+            "sequelize",
+            "typeorm",
+            "django",
+        ]
         try:
             for fname in ["requirements.txt", "package.json"]:
                 fpath = repo_path / fname
@@ -231,7 +244,7 @@ class EnvironmentBuilderAgent(BaseAgent):
 
     def _generate_compose(self, lang: str) -> str:
         app_port = "8000" if lang == "python" else "3000"
-        return f'''\
+        return f"""\
 version: "3.9"
 services:
   app:
@@ -257,4 +270,4 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-'''
+"""

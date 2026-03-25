@@ -17,17 +17,13 @@ Tables:
 
 import os
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import (
-    Column, String, DateTime, JSON, Text, ForeignKey, Enum as SAEnum
-)
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://devagent:devagent@localhost:5432/devagent"
+    "DATABASE_URL", "postgresql+asyncpg://devagent:devagent@localhost:5432/devagent"
 )
 
 engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
@@ -41,31 +37,31 @@ class Base(DeclarativeBase):
 class JobModel(Base):
     __tablename__ = "jobs"
 
-    id          = Column(String, primary_key=True)
-    repo_url    = Column(String, nullable=False)
-    status      = Column(String, nullable=False, default="pending")
-    created_at  = Column(DateTime, default=datetime.utcnow)
+    id = Column(String, primary_key=True)
+    repo_url = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
-    result      = Column(JSON, nullable=True)
-    error       = Column(Text, nullable=True)
+    result = Column(JSON, nullable=True)
+    error = Column(Text, nullable=True)
 
-    agents      = relationship("JobAgentModel", back_populates="job", cascade="all, delete-orphan")
+    agents = relationship("JobAgentModel", back_populates="job", cascade="all, delete-orphan")
 
 
 class JobAgentModel(Base):
     __tablename__ = "job_agents"
 
-    id             = Column(String, primary_key=True)   # "{job_id}:{agent_name}"
-    job_id         = Column(String, ForeignKey("jobs.id"), nullable=False)
-    name           = Column(String, nullable=False)
-    status         = Column(String, nullable=False, default="pending")
-    started_at     = Column(DateTime, nullable=True)
-    completed_at   = Column(DateTime, nullable=True)
+    id = Column(String, primary_key=True)  # "{job_id}:{agent_name}"
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
+    name = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
     last_heartbeat = Column(DateTime, nullable=True)
-    output         = Column(JSON, nullable=True)
-    error          = Column(Text, nullable=True)
+    output = Column(JSON, nullable=True)
+    error = Column(Text, nullable=True)
 
-    job            = relationship("JobModel", back_populates="agents")
+    job = relationship("JobModel", back_populates="agents")
 
 
 async def create_tables():
@@ -83,5 +79,6 @@ async def get_db() -> AsyncSession:
 # ── Run directly to create tables ─────────────────────────────────────────
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(create_tables())
     print("Tables created.")

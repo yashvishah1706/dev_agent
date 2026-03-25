@@ -1,6 +1,7 @@
-from enum import Enum
 from datetime import datetime
-from typing import Dict, Optional, Any
+from enum import Enum
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -14,23 +15,23 @@ class JobStatus(str, Enum):
 class AgentStatus(BaseModel):
     name: str
     status: str = "pending"
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    last_heartbeat: Optional[datetime] = None
-    duration_seconds: Optional[float] = None
-    output: Optional[Any] = None
-    error: Optional[str] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    last_heartbeat: datetime | None = None
+    duration_seconds: float | None = None
+    output: Any | None = None
+    error: str | None = None
     retries: int = 0
 
 
 class PerformanceMetrics(BaseModel):
-    total_duration_seconds: Optional[float] = None
-    clone_duration_seconds: Optional[float] = None
-    agent_durations: Dict[str, float] = {}
-    token_usage: Optional[int] = None
-    estimated_cost_usd: Optional[float] = None
-    repo_size_files: Optional[int] = None
-    repo_size_loc: Optional[int] = None
+    total_duration_seconds: float | None = None
+    clone_duration_seconds: float | None = None
+    agent_durations: dict[str, float] = {}
+    token_usage: int | None = None
+    estimated_cost_usd: float | None = None
+    repo_size_files: int | None = None
+    repo_size_loc: int | None = None
     concurrent_agents: int = 0
 
 
@@ -39,23 +40,20 @@ class Job(BaseModel):
     repo_url: str
     status: JobStatus
     created_at: datetime
-    completed_at: Optional[datetime] = None
-    agents: Dict[str, AgentStatus] = {}
-    result: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    metrics: Optional[PerformanceMetrics] = None
+    completed_at: datetime | None = None
+    agents: dict[str, AgentStatus] = {}
+    result: dict[str, Any] | None = None
+    error: str | None = None
+    metrics: PerformanceMetrics | None = None
 
 
 class AnalyzeRequest(BaseModel):
     repo_url: str
-    branch: Optional[str] = "main"
+    branch: str | None = "main"
 
     model_config = {
         "json_schema_extra": {
-            "example": {
-                "repo_url": "https://github.com/tiangolo/fastapi",
-                "branch": "master"
-            }
+            "example": {"repo_url": "https://github.com/tiangolo/fastapi", "branch": "master"}
         }
     }
 

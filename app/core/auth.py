@@ -10,7 +10,6 @@ In production swap the hardcoded user for a DB lookup.
 
 import os
 from datetime import datetime, timedelta
-from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -45,8 +44,8 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: Optional[str] = None
-    role: Optional[str] = None
+    username: str | None = None
+    role: str | None = None
 
 
 class User(BaseModel):
@@ -59,7 +58,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def authenticate_user(username: str, password: str) -> Optional[User]:
+def authenticate_user(username: str, password: str) -> User | None:
     user = DEMO_USERS.get(username)
     if not user:
         return None
@@ -68,7 +67,7 @@ def authenticate_user(username: str, password: str) -> Optional[User]:
     return User(username=user["username"], role=user["role"])
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})

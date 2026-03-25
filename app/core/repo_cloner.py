@@ -19,7 +19,7 @@ class RepoCloner:
     """
 
     ALLOWED_HOSTS = {"github.com", "gitlab.com", "bitbucket.org"}
-    MAX_DEPTH = 1      # shallow clone — fast, small
+    MAX_DEPTH = 1  # shallow clone — fast, small
 
     def __init__(self, base_path: str = None):
         self.base_path = Path(base_path or settings.repos_base_path)
@@ -45,9 +45,12 @@ class RepoCloner:
             shutil.rmtree(repo_path)
 
         cmd = [
-            "git", "clone",
-            "--depth", str(self.MAX_DEPTH),
-            "--branch", branch,
+            "git",
+            "clone",
+            "--depth",
+            str(self.MAX_DEPTH),
+            "--branch",
+            branch,
             "--single-branch",
             clean_url,
             str(repo_path),

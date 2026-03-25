@@ -1,28 +1,56 @@
 import os
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 from app.agents.base import BaseAgent
 
-
 # File extensions → language mapping
 LANG_MAP = {
-    ".py": "Python", ".js": "JavaScript", ".ts": "TypeScript",
-    ".tsx": "TypeScript", ".jsx": "JavaScript", ".java": "Java",
-    ".go": "Go", ".rs": "Rust", ".rb": "Ruby", ".php": "PHP",
-    ".cs": "C#", ".cpp": "C++", ".c": "C", ".swift": "Swift",
-    ".kt": "Kotlin", ".scala": "Scala", ".vue": "Vue",
-    ".html": "HTML", ".css": "CSS", ".scss": "SCSS",
-    ".sh": "Shell", ".yaml": "YAML", ".yml": "YAML",
-    ".json": "JSON", ".md": "Markdown", ".sql": "SQL",
+    ".py": "Python",
+    ".js": "JavaScript",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript",
+    ".jsx": "JavaScript",
+    ".java": "Java",
+    ".go": "Go",
+    ".rs": "Rust",
+    ".rb": "Ruby",
+    ".php": "PHP",
+    ".cs": "C#",
+    ".cpp": "C++",
+    ".c": "C",
+    ".swift": "Swift",
+    ".kt": "Kotlin",
+    ".scala": "Scala",
+    ".vue": "Vue",
+    ".html": "HTML",
+    ".css": "CSS",
+    ".scss": "SCSS",
+    ".sh": "Shell",
+    ".yaml": "YAML",
+    ".yml": "YAML",
+    ".json": "JSON",
+    ".md": "Markdown",
+    ".sql": "SQL",
 }
 
 # Dirs to skip always
 SKIP_DIRS = {
-    ".git", "node_modules", "__pycache__", ".venv", "venv",
-    "env", "dist", "build", ".next", ".nuxt", "coverage",
-    ".pytest_cache", ".mypy_cache", "vendor",
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "env",
+    "dist",
+    "build",
+    ".next",
+    ".nuxt",
+    "coverage",
+    ".pytest_cache",
+    ".mypy_cache",
+    "vendor",
 }
 
 # Config files that tell us about the stack
@@ -109,15 +137,23 @@ class RepoScannerAgent(BaseAgent):
                 # Count lines for code files
                 if lang and lang not in ("JSON", "YAML", "Markdown"):
                     try:
-                        with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                        with open(fpath, encoding="utf-8", errors="ignore") as f:
                             lines = sum(1 for _ in f)
                             stats["total_lines"] += lines
                     except Exception:
                         pass
 
                 # Detect common entry points
-                if fname in ("main.py", "app.py", "server.py", "index.js",
-                              "index.ts", "main.go", "main.rs", "app.js"):
+                if fname in (
+                    "main.py",
+                    "app.py",
+                    "server.py",
+                    "index.js",
+                    "index.ts",
+                    "main.go",
+                    "main.rs",
+                    "app.js",
+                ):
                     stats["entry_points"].append(str(rel_root / fname))
 
         # Convert defaultdict to regular dict for JSON serialization

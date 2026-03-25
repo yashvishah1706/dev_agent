@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
-from typing import Dict, Optional
-from app.schemas.job import Job, JobStatus, AgentStatus, PerformanceMetrics
+
+from app.schemas.job import AgentStatus, Job, JobStatus, PerformanceMetrics
 
 
 class JobStore:
@@ -11,7 +11,7 @@ class JobStore:
     """
 
     def __init__(self):
-        self._jobs: Dict[str, Job] = {}
+        self._jobs: dict[str, Job] = {}
         self._lock = asyncio.Lock()
 
     async def create(self, job_id: str, repo_url: str) -> Job:
@@ -27,10 +27,10 @@ class JobStore:
             self._jobs[job_id] = job
             return job
 
-    async def get(self, job_id: str) -> Optional[Job]:
+    async def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
 
-    async def update_status(self, job_id: str, status: JobStatus, error: Optional[str] = None):
+    async def update_status(self, job_id: str, status: JobStatus, error: str | None = None):
         async with self._lock:
             job = self._jobs.get(job_id)
             if job:
@@ -92,7 +92,7 @@ class JobStore:
             if job and job.metrics:
                 job.metrics.concurrent_agents = count
 
-    def all_jobs(self) -> Dict[str, Job]:
+    def all_jobs(self) -> dict[str, Job]:
         return dict(self._jobs)
 
 

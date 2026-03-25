@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.auth import (
-    authenticate_user,
-    create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     Token,
+    authenticate_user,
+    create_access_token,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -41,8 +41,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @router.get("/me")
-async def get_me(current_user=Depends(
-    __import__("app.core.auth", fromlist=["get_current_user"]).get_current_user
-)):
+async def get_me(
+    current_user=Depends(
+        __import__("app.core.auth", fromlist=["get_current_user"]).get_current_user
+    )
+):
     """Returns the currently authenticated user's info."""
     return {"username": current_user.username, "role": current_user.role}

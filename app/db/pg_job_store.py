@@ -8,15 +8,13 @@ Swap in main.py:
 Identical interface to the in-memory JobStore so nothing else changes.
 """
 
-import uuid
 from datetime import datetime
-from typing import Dict, Optional
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
-from app.db.models import AsyncSessionLocal, JobModel, JobAgentModel
-from app.schemas.job import Job, JobStatus, AgentStatus
+from app.db.models import AsyncSessionLocal, JobAgentModel, JobModel
+from app.schemas.job import AgentStatus, Job, JobStatus
 
 
 class PgJobStore:
@@ -39,36 +37,30 @@ class PgJobStore:
             created_at=datetime.utcnow(),
         )
 
-    async def get(self, job_id: str) -> Optional[Job]:
+    async def get(self, job_id: str) -> Job | None:
         async with AsyncSessionLocal() as session:
             result = await session.execute(
-                select(JobModel)
-                .options(selectinload(JobModel.agents))
-                .where(JobModel.id == job_id)
+                select(JobModel).options(selectinload(JobModel.agents)).where(JobModel.id == job_id)
             )
             row = result.scalar_one_or_none()
             if not row:
                 return None
             return self._to_schema(row)
 
-    async def update_status(self, job_id: str, status: JobStatus, error: Optional[str] = None):
+    async def update_status(self, job_id: str, status: JobStatus, error: str | None = None):
         async with AsyncSessionLocal() as session:
             values = {"status": status.value}
             if error:
                 values["error"] = error
             if status == JobStatus.COMPLETED:
                 values["completed_at"] = datetime.utcnow()
-            await session.execute(
-                update(JobModel).where(JobModel.id == job_id).values(**values)
-            )
+            await session.execute(update(JobModel).where(JobModel.id == job_id).values(**values))
             await session.commit()
 
     async def update_agent(self, job_id: str, agent_name: str, agent_status: AgentStatus):
         async with AsyncSessionLocal() as session:
             pk = f"{job_id}:{agent_name}"
-            result = await session.execute(
-                select(JobAgentModel).where(JobAgentModel.id == pk)
-            )
+            result = await session.execute(select(JobAgentModel).where(JobAgentModel.id == pk))
             row = result.scalar_one_or_none()
             if row:
                 row.status = agent_status.status
@@ -78,17 +70,19 @@ class PgJobStore:
                 row.output = agent_status.output
                 row.error = agent_status.error
             else:
-                session.add(JobAgentModel(
-                    id=pk,
-                    job_id=job_id,
-                    name=agent_name,
-                    status=agent_status.status,
-                    started_at=agent_status.started_at,
-                    completed_at=agent_status.completed_at,
-                    last_heartbeat=agent_status.last_heartbeat,
-                    output=agent_status.output,
-                    error=agent_status.error,
-                ))
+                session.add(
+                    JobAgentModel(
+                        id=pk,
+                        job_id=job_id,
+                        name=agent_name,
+                        status=agent_status.status,
+                        started_at=agent_status.started_at,
+                        completed_at=agent_status.completed_at,
+                        last_heartbeat=agent_status.last_heartbeat,
+                        output=agent_status.output,
+                        error=agent_status.error,
+                    )
+                )
             await session.commit()
 
     async def set_result(self, job_id: str, result: dict):
@@ -108,16 +102,15 @@ class PgJobStore:
             )
             await session.commit()
 
-    def all_jobs(self) -> Dict[str, Job]:
+    def all_jobs(self) -> dict[str, Job]:
         """Sync wrapper — for heartbeat monitor compatibility."""
         import asyncio
+
         return asyncio.get_event_loop().run_until_complete(self._all_jobs_async())
 
-    async def _all_jobs_async(self) -> Dict[str, Job]:
+    async def _all_jobs_async(self) -> dict[str, Job]:
         async with AsyncSessionLocal() as session:
-            result = await session.execute(
-                select(JobModel).options(selectinload(JobModel.agents))
-            )
+            result = await session.execute(select(JobModel).options(selectinload(JobModel.agents)))
             rows = result.scalars().all()
             return {row.id: self._to_schema(row) for row in rows}
 

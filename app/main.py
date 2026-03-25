@@ -6,14 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.core.config import settings
-from app.core.job_store import job_store
-from app.core.heartbeat import HeartbeatMonitor
-from app.core.rate_limit import limiter, rate_limit_exceeded_handler
-from app.core.logger import setup_logging, get_logger
-from app.api.routes import router as jobs_router
 from app.api.auth_routes import router as auth_router
+from app.api.routes import router as jobs_router
 from app.api.ws_routes import router as ws_router
+from app.core.heartbeat import HeartbeatMonitor
+from app.core.job_store import job_store
+from app.core.logger import get_logger, setup_logging
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 
 setup_logging(level="INFO")
 logger = get_logger(__name__)

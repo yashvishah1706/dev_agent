@@ -24,11 +24,11 @@ import asyncio
 import json
 from datetime import datetime
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 from jose import JWTError, jwt
 
+from app.core.auth import ALGORITHM, SECRET_KEY
 from app.core.job_store import job_store
-from app.core.auth import SECRET_KEY, ALGORITHM
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
