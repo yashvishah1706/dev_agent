@@ -1,5 +1,5 @@
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel
@@ -68,6 +68,6 @@ class JobDetailResponse(BaseModel):
     job: Job
 
 
-class ExportFormat(str, Enum):
+class ExportFormat(StrEnum):
     JSON = "json"
     MARKDOWN = "markdown"
