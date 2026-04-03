@@ -58,7 +58,8 @@ class TestRunnerAgent(BaseAgent):
 
         cmd = SAFE_TEST_COMMANDS[framework]
         logger.info(
-            "Running tests", extra={"job_id": self.job_id, "framework": framework, "cmd": cmd}
+            "Running tests",
+            extra={"job_id": self.job_id, "framework": framework, "cmd": cmd},
         )
 
         result = await self._run_subprocess(cmd)
@@ -71,12 +72,12 @@ class TestRunnerAgent(BaseAgent):
             "passed": parsed["passed"],
             "failed": parsed["failed"],
             "errors": parsed["errors"],
-            "output": (result["stdout"] + result["stderr"])[:4000],  # cap output size
+            "output": (result["stdout"] + result["stderr"])[:4000],
             "timed_out": result["timed_out"],
         }
 
     def _detect_framework(self) -> str | None:
-        """Detect which test framework to use. Returns framework key or None."""
+        """Detect which test framework to use."""
         repo = self.repo_path
 
         # Python
@@ -93,7 +94,10 @@ class TestRunnerAgent(BaseAgent):
 
                 pkg = json.loads((repo / "package.json").read_text())
                 scripts = pkg.get("scripts", {})
-                devdeps = {**pkg.get("devDependencies", {}), **pkg.get("dependencies", {})}
+                devdeps = {
+                    **pkg.get("devDependencies", {}),
+                    **pkg.get("dependencies", {}),
+                }
 
                 if "vitest" in devdeps:
                     return "vitest"
@@ -116,7 +120,6 @@ class TestRunnerAgent(BaseAgent):
 
     async def _run_subprocess(self, cmd: list[str]) -> dict:
         """Run a command in the repo directory with timeout."""
-        timed_out = False
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -124,6 +127,7 @@ class TestRunnerAgent(BaseAgent):
                 stderr=asyncio.subprocess.PIPE,
                 cwd=str(self.repo_path),
             )
+
             try:
                 stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
                 return {
@@ -132,15 +136,16 @@ class TestRunnerAgent(BaseAgent):
                     "exit_code": proc.returncode,
                     "timed_out": False,
                 }
+
             except TimeoutError:
                 proc.kill()
-                timed_out = True
                 return {
                     "stdout": "",
                     "stderr": "Test run timed out after 60 seconds.",
                     "exit_code": -1,
                     "timed_out": True,
                 }
+
         except FileNotFoundError:
             return {
                 "stdout": "",
@@ -157,7 +162,6 @@ class TestRunnerAgent(BaseAgent):
         passed = failed = errors = 0
 
         if framework == "pytest":
-            # "5 passed, 2 failed, 1 error"
             m = re.search(r"(\d+) passed", output)
             if m:
                 passed = int(m.group(1))
@@ -169,7 +173,6 @@ class TestRunnerAgent(BaseAgent):
                 errors = int(m.group(1))
 
         elif framework in ("jest", "vitest", "npm_test"):
-            # "Tests: 5 passed, 2 failed"
             m = re.search(r"(\d+) passed", output)
             if m:
                 passed = int(m.group(1))
@@ -178,7 +181,6 @@ class TestRunnerAgent(BaseAgent):
                 failed = int(m.group(1))
 
         elif framework == "go_test":
-            # "ok" lines = passed packages, "FAIL" lines = failed
             passed = output.count("\nok ")
             failed = output.count("\nFAIL")
 

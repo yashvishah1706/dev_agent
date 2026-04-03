@@ -24,7 +24,6 @@ async def analyze_repo(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
 ):
-    """Start analysis. Rate limited: 5/min per IP. Returns job_id immediately."""
     job_id = str(uuid.uuid4())
     await job_store.create(job_id, body.repo_url)
     logger.info(
@@ -33,6 +32,7 @@ async def analyze_repo(
     )
     pipeline = AgentPipeline(job_id, body.repo_url, body.branch or "main")
     background_tasks.add_task(pipeline.run)
+
     return AnalyzeResponse(
         job_id=job_id,
         status=JobStatus.PENDING,
@@ -43,7 +43,6 @@ async def analyze_repo(
 @router.get("/jobs/{job_id}", response_model=JobDetailResponse)
 @limiter.limit("60/minute")
 async def get_job(request: Request, job_id: str, current_user: User = Depends(get_current_user)):
-    """Get current job status, agent states, results, and performance metrics."""
     job = await job_store.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -53,7 +52,6 @@ async def get_job(request: Request, job_id: str, current_user: User = Depends(ge
 @router.get("/jobs")
 @limiter.limit("30/minute")
 async def list_jobs(request: Request, current_user: User = Depends(get_current_user)):
-    """List all jobs with summary info."""
     jobs = job_store.all_jobs()
     return {
         "total": len(jobs),
@@ -73,14 +71,6 @@ async def list_jobs(request: Request, current_user: User = Depends(get_current_u
 
 @router.get("/jobs/{job_id}/metrics")
 async def get_metrics(job_id: str, current_user: User = Depends(get_current_user)):
-    """
-    Returns detailed performance metrics for a completed job:
-    - Total pipeline duration
-    - Per-agent timing
-    - Clone duration
-    - Token usage + estimated cost
-    - Repo size (files + LOC)
-    """
     job = await job_store.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -123,11 +113,6 @@ async def export_job(
     format: str = "json",
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Export analysis results.
-    - format=json  → full JSON download
-    - format=markdown → human-readable Markdown report
-    """
     job = await job_store.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -142,7 +127,6 @@ async def export_job(
             headers={"Content-Disposition": f'attachment; filename="dev-agent-{job_id[:8]}.md"'},
         )
 
-    # Default: JSON
     return JSONResponse(
         content=_serialize_job(job),
         headers={"Content-Disposition": f'attachment; filename="dev-agent-{job_id[:8]}.json"'},
@@ -151,7 +135,6 @@ async def export_job(
 
 @router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str, current_user: User = Depends(get_current_user)):
-    """Delete a job from the store."""
     job = await job_store.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -164,8 +147,6 @@ async def delete_job(job_id: str, current_user: User = Depends(get_current_user)
 
 
 def _serialize_job(job) -> dict:
-    """Convert job to JSON-serializable dict."""
-
     def default(o):
         if isinstance(o, datetime):
             return o.isoformat()
@@ -181,7 +162,6 @@ def _build_markdown_report(job) -> str:
     deps = r.get("dependencies", {})
     env = r.get("environment", {})
     explanation = r.get("explanation", {})
-    tests = r.get("tests", {})
     metrics = job.metrics
 
     lines = [
@@ -212,11 +192,7 @@ def _build_markdown_report(job) -> str:
     for s in summary.get("stack", []):
         lines.append(f"- {s}")
 
-    lines += [
-        "",
-        "## Languages",
-        "",
-    ]
+    lines += ["", "## Languages", ""]
     for lang, count in list(scan.get("languages", {}).items())[:10]:
         lines.append(f"- **{lang}**: {count} files")
 
@@ -231,14 +207,7 @@ def _build_markdown_report(job) -> str:
         lines.append("No dependencies found.")
 
     if env.get("dockerfile"):
-        lines += [
-            "",
-            "## Generated Dockerfile",
-            "",
-            "```dockerfile",
-            env["dockerfile"].strip(),
-            "```",
-        ]
+        lines += ["", "## Generated Dockerfile", "", "```dockerfile", env["dockerfile"].strip(), "```"]
 
     if env.get("run_command"):
         lines += ["", "## Run Command", "", "```bash", env["run_command"], "```"]
