@@ -207,7 +207,14 @@ def _build_markdown_report(job) -> str:
         lines.append("No dependencies found.")
 
     if env.get("dockerfile"):
-        lines += ["", "## Generated Dockerfile", "", "```dockerfile", env["dockerfile"].strip(), "```"]
+        lines += [
+            "",
+            "## Generated Dockerfile",
+            "",
+            "```dockerfile",
+            env["dockerfile"].strip(),
+            "```",
+        ]
 
     if env.get("run_command"):
         lines += ["", "## Run Command", "", "```bash", env["run_command"], "```"]

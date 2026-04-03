@@ -35,9 +35,7 @@ class RepoCloner:
             )
 
         # Strip any embedded credentials (safety)
-        clean = parsed._replace(
-            netloc=parsed.hostname + (f":{parsed.port}" if parsed.port else "")
-        )
+        clean = parsed._replace(netloc=parsed.hostname + (f":{parsed.port}" if parsed.port else ""))
         return clean.geturl()
 
     def clone(self, job_id: str, repo_url: str, branch: str = "main") -> Path:
@@ -80,17 +78,13 @@ class RepoCloner:
                 if branch == "main":
                     return self.clone(job_id, repo_url, branch="master")
 
-                raise RuntimeError(
-                    f"Git clone failed: {result.stderr.strip()}"
-                )
+                raise RuntimeError(f"Git clone failed: {result.stderr.strip()}")
 
         except subprocess.TimeoutExpired as e:
             if repo_path.exists():
                 shutil.rmtree(repo_path)
 
-            raise RuntimeError(
-                "Repository clone timed out after 120 seconds"
-            ) from e
+            raise RuntimeError("Repository clone timed out after 120 seconds") from e
 
         except Exception as e:
             if repo_path.exists():
